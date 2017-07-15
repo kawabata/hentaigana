@@ -7,7 +7,7 @@
 ;; Author: KAWABATA, Taichi <kawabata.taichi@gmail.com>
 ;; Created: 2017-07-10
 ;; Version: 1.170715
-;; Package-Requires: ((dash "2.8") (cl-lib "1.0"))
+;; Package-Requires: ((emacs "25") (dash "2.8") (popup "0.5.3"))
 ;; Keywords: i18n
 ;; URL: https://github.com/kawabata/hentaigana
 
@@ -35,18 +35,17 @@
 ;; M-x hentaigana-to-kanji-region
 
 ;; Customization Variables
+;;
 ;; - hentaigana-use-new-kanji :: `t' if use new kanji. `nil' if use old kanji.
 ;;   Otherwise both kanjis are put together with braces.
-;; - hentaigana-preferred :: alist of (kana . hentaigana-list)
-;;   preferences. If single character is specified, convert to that
-;;   character. If multiple characters are provided, list of these
-;;   characters will be put togher with braces. If not specified, all
-;;   characters will be placed.
+;;
+;; - hentaigana-preferred :: List of preferred hentaigana characters.
 
 ;;; Code:
 
 (require 'quail)
 (require 'dash)
+(require 'popup)
 
 ;; Customized variables
 
@@ -55,23 +54,23 @@
   :tag "Hentaigana"
   :group 'i18n)
 
-;;(defcustom hentaigana-preference-alist
-;;  '(;; Followings are examples
-;;    ;; (?あ ?𛀂) (?い ?𛀆 ?𛀇 ?𛀈)
-;;    )
-;;  "Alist of preferred hentaigana."
-;;  :group 'hentaigana
-;;  :type 'list)
+(defcustom hentaigana-preferred
+  '(;; Followings are examples
+    ;; ?𛀂 ?𛀆
+    )
+  "Alist of preferred hentaigana."
+  :group 'hentaigana
+  :type 'list)
 
 (defcustom hentaigana-use-new-kanji t
   "Use new Kanji instead of Old."
   :group 'hentaigana
   :type '(choice (const t) (const nil)))
 
+(eval-and-compile
 (defconst hentaigana-transliteration-alist
   '(( "a" . ?あ) ( "i" . ?い) ( "u" . ?う) ( "e" . ?え) ( "o" . ?お)
     ("ka" . ?か) ("ki" . ?き) ("ku" . ?く) ("ke" . ?け) ("ko" . ?こ)
-    ("ga" . ?が) ("ki" . ?ぎ) ("ku" . ?ぐ) ("ke" . ?げ) ("ko" . ?ご)
     ("sa" . ?さ) ("si" . ?し) ("su" . ?す) ("se" . ?せ) ("so" . ?そ)
                 ("shi" . ?し)
     ("ta" . ?た) ("ti" . ?ち) ("tu" . ?つ) ("te" . ?て) ("to" . ?と)
@@ -375,51 +374,48 @@
     (?麻 . "𛃈")))
 
 (defconst hentaigana-new-kanji-alist
-  '((?与 . "よ𛃩𛃪𛃫")
-    (?伝 . "𛁰")
-    (?児 . "𛂊")
-    (?処 . "𛁝")
-    (?声 . "𛁖")
-    (?宝 . "𛂾")
-    (?寿 . "𛁋")
-    (?尓 . "𛂋𛂌")
-    (?当 . "𛁡")
-    (?恵 . "ゑ𛄒")
-    (?曽 . "そ𛁙𛁚")
-    (?楼 . "𛄅")
-    (?気 . "𛀵")
-    (?満 . "𛃅𛃆")
-    (?為 . "ゐ𛄐")
-    (?礼 . "れ𛃾𛃿")
-    (?祢 . "ね𛂗")
-    (?豊 . "𛃁")
-    (?辺 . "𛂷𛂸")
-    (?隠 . "𛀖")))
+  '((?與 . ?与)
+    (?傳 . ?伝)
+    (?兒 . ?児)
+    (?處 . ?処)
+    (?聲 . ?声)
+    (?寶 . ?宝)
+    (?壽 . ?寿)
+    (?爾 . ?尓)
+    (?當 . ?当)
+    (?惠 . ?恵)
+    (?曾 . ?曽)
+    (?樓 . ?楼)
+    (?氣 . ?気)
+    (?滿 . ?満)
+    (?爲 . ?為)
+    (?禮 . ?礼)
+    (?禰 . ?祢)
+    (?豐 . ?豊)
+    (?邊 . ?辺)
+    (?隱 . ?隠)))
+
+) ;; eval-and-compile
 
 (defvar hentaigana-to-kana-table
+  (eval-when-compile
   (let ((table (make-hash-table)))
     (dolist (alist hentaigana-alist)
       (dolist (hkana (string-to-list (cdr alist)))
         (cl-pushnew (car alist) (gethash hkana table))))
-    table))
+    table)))
 
 (defvar hentaigana-to-kanji-table
+  (eval-when-compile
   (let ((table (make-hash-table)))
     (dolist (alist hentaigana-kanji-alist)
       (dolist (hkana (string-to-list (cdr alist)))
         (puthash hkana (car alist) table)))
-    table))
-
-(defvar hentaigana-to-new-kanji-table
-  (let ((table (make-hash-table)))
-    (dolist (alist hentaigana-new-kanji-alist)
-      (dolist (hkana (string-to-list (cdr alist)))
-        (puthash hkana (car alist) table)))
-    table))
+    table)))
 
 ;;;###autoload
 (defun hentaigana-to-kana-region (from to)
-  "Change to kana in a region FROM TO."
+  "Change to Kana in a region FROM TO."
   (interactive "r")
   (save-excursion
     (save-restriction
@@ -430,26 +426,25 @@
                               hentaigana-to-kana-table)))
           (if (= (length hkana) 1)
               (replace-match (char-to-string (car hkana)))
-            (replace-match (concat "[" (apply 'string hkana) "]"))))))))
+            (replace-match (concat "[" (apply 'string hkana) "]")))))
+      (ucs-normalize-HFS-NFC-region (point-min) (point-max)))))
 
 ;;;###autoload
 (defun hentaigana-to-kanji-region (from to)
-  "Change to kana in a region FROM TO to kanji."
-  ;; TODO 普通の平仮名の濁音処理
+  "Change to Kanji in a region FROM TO."
   (interactive "r")
   (save-excursion
     (save-restriction
       (narrow-to-region from to)
       (goto-char (point-min))
       (while (re-search-forward "[あ-ん𛀁-𛄞]" nil t)
-        (let ((kanji (gethash (string-to-char (match-string 0))
-                              hentaigana-to-kanji-table))
-              (new-kanji (gethash (string-to-char (match-string 0))
-                            hentaigana-to-new-kanji-table)))
+        (let* ((kanji (gethash (string-to-char (match-string 0))
+                               hentaigana-to-kanji-table))
+               (new-kanji (alist-get kanji hentaigana-new-kanji-alist)))
           (unless (null kanji)
             (replace-match
              (char-to-string
-              (if (and new-kanji hentaigana-use-new-kanji) new-kanji kanji)))))))))
+              (or (and hentaigana-use-new-kanji new-kanji) kanji)))))))))
 
 ;;;###autoload
 (defun hentaigana-region (from to)
@@ -461,59 +456,66 @@
       (narrow-to-region from to)
       (goto-char (point-min))
       (while (re-search-forward "[あ-ん]" nil t)
-        (let* ((decomp (get-char-code-property
+        (let* ((decomposition (get-char-code-property
                         (string-to-char (match-string 0)) 'decomposition))
-               (kana (car decomp))
-               (dakuon (apply 'string (cdr decomp)))
-               (hen (assoc kana hentaigana-alist)))
-          (when hen
-            (replace-match (concat "[" (cdr hen) "]" dakuon))))))))
+               (kana (car decomposition))
+               (dakuon (apply 'string (cdr decomposition)))
+               (hentaigana (alist-get kana hentaigana-alist)))
+          (when hentaigana
+            (replace-match
+             (concat "["
+                     (mapconcat (lambda (x) (concat x dakuon))
+                                (split-string hentaigana "") "")
+                     "]"))))))))
 
 ;;;###autoload
 (defun hentaigana ()
-  "Change Hentaigana at point."
+  "Change Kana/Kanji to Hentaigana at point."
   (interactive)
   (let* ((char (char-after (point)))
-         (decomp (get-char-code-property
-                  (string-to-char (match-string 0)) 'decomposition))
-         (kana (car decomp))
-         (dakuon (apply 'string (cdr decomp)))
-         (hen (assoc kana hentaigana-alist)))
-    (when hen
-      (insert (concat "[" (cdr hen) "]" dakuon)))))
+         (decomposition (get-char-code-property char 'decomposition))
+         (kana-kanji (car decomposition))
+         (dakuon (apply 'string (cdr decomposition)))
+         (hentaigana (or (alist-get kana-kanji hentaigana-alist)
+                         (alist-get kana-kanji hentaigana-kanji-alist)
+                         (alist-get
+                           (car (rassq kana-kanji hentaigana-new-kanji-alist))
+                           hentaigana-kanji-alist))))
+    (when hentaigana
+      (insert (popup-menu* (mapcar (lambda (x) (concat x dakuon))
+                                   (split-string hentaigana "" t))))
+      (delete-char 1)
+      )))
 
 ;;;###autoload
-(register-input-method "hentaigana" "hen"
-                       'hentaigana-input-activate "hen")
-
-;;;###autoload
-(defun hentaigana-input-activate (name)
-  "Activating Hentaigana Input method."
-  (robin-use-package name))
+(register-input-method
+ "japanese-hentaigana" "Japanese" 'quail-use-package "変")
 
 (quail-define-package
- "hentaigana" "Japanese" "変" t
- "変体仮名入力."
+ "japanese-hentaigana" "Japanese" "変" t
+ "変体仮名入力メソッド."
  nil nil nil nil nil nil t)
 
 (eval
  `(quail-define-rules
    ,@(cl-loop
-      for pair in hentaigana-transliteration-alist
-      for trans = (car pair)
-      for kana = (cdr pair)
+      for alist in hentaigana-transliteration-alist
+      for transliteration = (car alist)
+      for kana = (cdr alist)
       for decomposition = (get-char-code-property kana 'decomposition)
       for dakuon = (apply 'string (cdr decomposition))
-      for kana2 = (car decomposition)
-      for hen = (cdr (assoc kana2 hentaigana-alist))
-      for hen-list = (string-to-list hen)
-      collect (list trans (apply 'vector
-                                 (cons (char-to-string kana)
-                                       (mapcar (lambda (x) (concat (char-to-string x)
-                                                               dakuon)) hen-list))))
-      nconc (--map-indexed (list (concat trans (format "%c" (+ 97 it-index)))
-                                 (vector (concat (char-to-string it) dakuon)))
-                           hen-list))))
+      for kana-head = (car decomposition)
+      for hentaigana = (cdr (assoc kana-head hentaigana-alist))
+      for hentaigana-list = (string-to-list hentaigana)
+      collect (list transliteration
+                    (apply 'vector
+                           (cons (char-to-string kana)
+                                 (mapcar (lambda (x) (concat (char-to-string x) dakuon))
+                                         hentaigana-list))))
+      nconc (--map-indexed
+             (list (concat transliteration (format "%c" (+ 65 it-index)))
+                   (vector (concat (char-to-string it) dakuon)))
+             hentaigana-list))))
 
 (provide 'hentaigana)
 
