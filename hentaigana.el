@@ -56,7 +56,7 @@
 
 (defcustom hentaigana-preferred
   '(;; Followings are examples
-    ;; ?𛀂 ?𛀆
+    ;; ?𛀟 ?𛀙
     )
   "Alist of preferred hentaigana."
   :group 'hentaigana
@@ -401,16 +401,16 @@
   (eval-when-compile
   (let ((table (make-hash-table)))
     (dolist (alist hentaigana-alist)
-      (dolist (hkana (string-to-list (cdr alist)))
-        (cl-pushnew (car alist) (gethash hkana table))))
+      (dolist (hentaigana (string-to-list (cdr alist)))
+        (cl-pushnew (car alist) (gethash hentaigana table))))
     table)))
 
 (defvar hentaigana-to-kanji-table
   (eval-when-compile
   (let ((table (make-hash-table)))
     (dolist (alist hentaigana-kanji-alist)
-      (dolist (hkana (string-to-list (cdr alist)))
-        (puthash hkana (car alist) table)))
+      (dolist (hentaigana (string-to-list (cdr alist)))
+        (puthash hentaigana (car alist) table)))
     table)))
 
 ;;;###autoload
@@ -422,11 +422,11 @@
       (narrow-to-region from to)
       (goto-char (point-min))
       (while (re-search-forward "[𛀁-𛄞]" nil t)
-        (let ((hkana (gethash (string-to-char (match-string 0))
-                              hentaigana-to-kana-table)))
-          (if (= (length hkana) 1)
-              (replace-match (char-to-string (car hkana)))
-            (replace-match (concat "[" (apply 'string hkana) "]")))))
+        (let ((kana (gethash (string-to-char (match-string 0))
+                             hentaigana-to-kana-table)))
+          (if (= (length kana) 1)
+              (replace-match (char-to-string (car kana)))
+            (replace-match (concat "[" (apply 'string kana) "]")))))
       (ucs-normalize-HFS-NFC-region (point-min) (point-max)))))
 
 ;;;###autoload
@@ -450,7 +450,6 @@
 (defun hentaigana-region (from to)
   "Change Kana to (preferred) Hentaigana in a region FROM TO."
   (interactive "r")
-  ;; TODO Preferred List 処理
   (save-excursion
     (save-restriction
       (narrow-to-region from to)
@@ -460,13 +459,19 @@
                         (string-to-char (match-string 0)) 'decomposition))
                (kana (car decomposition))
                (dakuon (apply 'string (cdr decomposition)))
-               (hentaigana (alist-get kana hentaigana-alist)))
-          (when hentaigana
+               (hentaigana (alist-get kana hentaigana-alist))
+               (hentaigana-list (cons kana (string-to-list hentaigana)))
+               (hentaigana-list
+                (or (cl-intersection hentaigana-list hentaigana-preferred)
+                    hentaigana-list)))
+          (when hentaigana-list
             (replace-match
-             (concat "["
-                     (mapconcat (lambda (x) (concat x dakuon))
-                                (split-string hentaigana "") "")
-                     "]"))))))))
+             (if (= (length hentaigana-list) 1)
+                 (concat (char-to-string (car hentaigana-list)) dakuon)
+               (concat "["
+                       (mapconcat (lambda (x) (concat (char-to-string x) dakuon))
+                                  hentaigana-list "")
+                       "]")))))))))
 
 ;;;###autoload
 (defun hentaigana ()
