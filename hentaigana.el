@@ -1,6 +1,6 @@
 ;;; hentaigana.el --- Hentaigana Input Method and tools.  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2017  川幡 太一
+;; Copyright (C) 2017  KAWABATA, Taichi
 
 ;; Filename: hentaigana.el
 ;; Description: Hentaigana Input Method
