@@ -6,7 +6,7 @@
 ;; Description: Hentaigana Input Method
 ;; Author: KAWABATA, Taichi <kawabata.taichi@gmail.com>
 ;; Created: 2017-07-10
-;; Version: 1.170715
+;; Version: 1.170716
 ;; Package-Requires: ((emacs "25") (dash "2.8") (popup "0.5.3"))
 ;; Keywords: i18n
 ;; URL: https://github.com/kawabata/hentaigana
@@ -63,7 +63,7 @@
   :type 'list)
 
 (defcustom hentaigana-use-new-kanji t
-  "Use new Kanji instead of Old."
+  "Use new Kanji instead of old Kanji."
   :group 'hentaigana
   :type '(choice (const t) (const nil)))
 
@@ -478,6 +478,7 @@
   "Change Kana/Kanji to Hentaigana at point."
   (interactive)
   (let* ((char (char-after (point)))
+         (input-method current-input-method)
          (decomposition (get-char-code-property char 'decomposition))
          (kana-kanji (car decomposition))
          (dakuon (apply 'string (cdr decomposition)))
@@ -487,10 +488,12 @@
                            (car (rassq kana-kanji hentaigana-new-kanji-alist))
                            hentaigana-kanji-alist))))
     (when hentaigana
+      (when input-method (deactivate-input-method))
       (insert (popup-menu* (mapcar (lambda (x) (concat x dakuon))
                                    (split-string hentaigana "" t))))
       (delete-char 1)
-      )))
+      (when input-method (activate-input-method input-method))
+    )))
 
 ;;;###autoload
 (register-input-method
