@@ -6,7 +6,7 @@
 ;; Description: Hentaigana Input Method
 ;; Author: KAWABATA, Taichi <kawabata.taichi@gmail.com>
 ;; Created: 2017-07-10
-;; Version: 1.170716
+;; Version: 1.170817
 ;; Package-Requires: ((emacs "25") (dash "2.8") (popup "0.5.3"))
 ;; Keywords: i18n
 ;; URL: https://github.com/kawabata/hentaigana
@@ -28,7 +28,9 @@
 
 ;; Hentaigana Input methods and other tools.
 ;;
-;; This tool proides following four commands, along with input method `hentaigana'.
+;; This tool proides following four commands, along with input method
+;; `japanese-hentaigana'.
+;;
 ;; M-x hentaigana
 ;; M-x hentaigana-region
 ;; M-x hentaigana-to-kana-region
